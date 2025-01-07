@@ -20,7 +20,6 @@ const App = () => {
         console.error("Failed to fetch subscriptions");
       }
     }
-
     fetchSubscriptions();
   }, []);
 
@@ -41,7 +40,7 @@ const App = () => {
       <ul>
         {Object.keys(subscriptions).map((userID, index) => (
           <li key={index}>
-            <strong>Endpoint:</strong> {userID}
+            <strong>Users:</strong> {userID}
           </li>
         ))}
       </ul>
