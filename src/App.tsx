@@ -12,6 +12,11 @@ interface SubscriptionItem {
 const App = () => {
   const [subscriptions, setSubscriptions] = useState<Record<string, SubscriptionItem>>({});
   const [loading, setLoading] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, []);
 
   async function fetchSubscriptions() {
     setLoading(true);
@@ -30,11 +35,17 @@ const App = () => {
     }
   }
 
-  useEffect(() => {
-    fetchSubscriptions();
-  }, []);
+  const handleSelectAll = () => {
+    const allUsers = Object.keys(subscriptions);
+    setSelectedUsers(prev => {
+      if(prev.length === allUsers.length){
+        return []
+      }
+      return allUsers;
+    });
+  };
 
-  const handleNotifyAll = async (
+  const handleNotifySelected = async (
     title: string,
     message: string,
     actions: { action: string; title: string; icon: string }[]
@@ -43,44 +54,27 @@ const App = () => {
     try {
       const response = await fetch("http://localhost:8080/notify", {
         method: "POST",
-        body: JSON.stringify({ title, message, actions }),
+        body: JSON.stringify({
+          users: selectedUsers,
+          title,
+          message,
+          actions,
+        }),
         headers: { "Content-Type": "application/json" },
       });
       if (response.ok) {
-        alert("Notifications sent to all subscriptions.");
+        alert("Notifications sent to selected users.");
       } else {
         alert("Failed to send notifications.");
       }
     } catch (error) {
-      console.error("Error sending notifications to all:", error);
+      console.error("Error sending notifications to selected users:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNotify = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    const userid = event.currentTarget.dataset.userid;
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:8080/notify-user", {
-        method: "POST",
-        body: JSON.stringify({ userid }),
-        headers: { "Content-Type": "application/json" },
-      });
-      if (response.ok) {
-        alert(`Notification sent to user ${userid}`);
-      } else {
-        alert("Failed to send notification.");
-      }
-    } catch (error) {
-      console.error("Error sending notification:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const unsubscribe = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    const userid = event.currentTarget.dataset.userid;
+  const unsubscribe = async (userid: string) => {
     setLoading(true);
     try {
       const response = await fetch("http://localhost:8080/unsubscribe", {
@@ -100,36 +94,53 @@ const App = () => {
     }
   };
 
+  const toggleUserSelection = (userid: string) => {
+    if (selectedUsers.includes(userid)) {
+      setSelectedUsers(selectedUsers.filter((id) => id !== userid));
+    } else {
+      setSelectedUsers([...selectedUsers, userid]);
+    }
+  };
+
   return (
     <div>
       <h1>Dashboard</h1>
-      <NotificationForm onSubmit={handleNotifyAll} loading={loading} />
       <h2>Subscriptions</h2>
       {loading ? (
         <p>Loading subscriptions...</p>
       ) : (
-        <ul style={{ listStyleType: "none", padding: 0 }}>
+        <div>
           {Object.keys(subscriptions).length === 0 ? (
             <p>No subscriptions available</p>
           ) : (
-            Object.keys(subscriptions).map((userID) => (
-              <li key={userID} style={{ marginBottom: "15px" }}>
-                <div className="user-item">
-                  <p>
-                    <strong>User:</strong> {userID}
-                  </p>
-                  <button onClick={handleNotify} data-userid={userID} disabled={loading}>
-                    {loading ? "Notifying..." : "Notify"}
-                  </button>
-                  <button onClick={unsubscribe} data-userid={userID} disabled={loading}>
-                    {loading ? "Removing..." : "Remove"}
-                  </button>
-                </div>
-              </li>
-            ))
+            <div>
+              <button onClick={handleSelectAll} disabled={loading}>
+                Select All
+              </button>
+              <ul style={{ listStyleType: "none", padding: 0 }}>
+                {Object.keys(subscriptions).map((userID) => (
+                  <li key={userID} style={{ marginBottom: "15px" }}>
+                    <div className="user-item">
+                      <p>
+                        <strong>User:</strong> {userID}
+                      </p>
+                      <button onClick={() => unsubscribe(userID)} disabled={loading}>
+                        {loading ? "Removing..." : "Remove"}
+                      </button>
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(userID)}
+                        onChange={() => toggleUserSelection(userID)}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-        </ul>
+        </div>
       )}
+      <NotificationForm onSubmit={handleNotifySelected} loading={loading} disabled={selectedUsers.length===0} />
     </div>
   );
 };

@@ -9,9 +9,10 @@ interface NotificationAction {
 interface NotificationFormProps {
   onSubmit: (title: string, message: string, actions: NotificationAction[]) => void;
   loading: boolean;
+  disabled: boolean
 }
 
-const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading }) => {
+const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading, disabled }) => {
   const [title, setTitle] = useState<string>("");
   const [message, setMessage] = useState<string>("");
   const [actions, setActions] = useState<NotificationAction[]>([]);
@@ -114,8 +115,8 @@ const NotificationForm: React.FC<NotificationFormProps> = ({ onSubmit, loading }
         Add Action
       </button>
       <br />
-      <button type="submit" disabled={loading}>
-        {loading ? "Sending..." : "Notify All"}
+      <button type="submit" disabled={loading || disabled}>
+        {loading ? "Sending..." : "Notify selected users"}
       </button>
     </form>
   );
